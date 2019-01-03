@@ -15,7 +15,7 @@ class FileController < ApplicationController
   	end
 
   	output = output.join("\n")
-  	send_data(output, filename: "pocket.txt", disposition: 'attachment')
+  	send_data(output, filename: 'pocket.txt', disposition: 'attachment')
   end
 
   def file_params

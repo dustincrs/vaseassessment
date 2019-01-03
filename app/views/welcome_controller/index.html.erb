@@ -50,7 +50,7 @@
       </div>
       <div id="pocket_contents" class="modal-body">
       </div>
-      <div class="modal-footer">
+      <div id="button_container" class="modal-footer">
         <button type="button" class="btn btn-secondary w-100" data-dismiss="modal">Close</button> <br/>
         <button id="download_text" type="button" class="btn btn-primary w-100" data-dismiss="modal">Download as TXT</button>
       </div>
@@ -123,19 +123,9 @@
 				save_ids.push(pocket_item.id)
 			});
 
-			// $.post( "/file/download", { ids: save_ids } );
-			$.ajax({
-				url: "/file/download",
-				method: "GET",
-				data: {ids: save_ids},
-				dataType: "JSON",
-				success: function(data)	{
-					console.log("yay")
-				},
-				error: function(data)	{
-					console.log("shit")
-				}
-			});
+			window.open("/file/download?" + $.param({ids : save_ids}), '_blank')
+			// $.get( "/file/download", { ids: save_ids } );
+
 		}
 
 		// AJAX Search
