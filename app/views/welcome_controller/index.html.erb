@@ -1,0 +1,207 @@
+<div class="container-fluid">
+	<div class="row my-5">
+		<div class="col text-center">
+			<%= form_with url: survey_index_path do |f| %>
+				
+				<%= f.file_field :qsf_file, class: "form-control" %>
+				<%= f.submit "Upload .qsf", class: "btn btn-success"%>
+
+			<% end %>
+		</div>
+	</div>
+
+	<div class="row my-5">
+		<div class="col text-center">
+			<input type="text" id="search_bar" class="w-100 form-control" placeholder="Search..." />
+		</div>
+	</div>
+
+	<div class="row my-5">
+		<div class="col text-center">
+			<h1>Questions we've found:</h1>
+			<hr />
+		</div>
+	</div>
+</div>
+
+<div class="container-fluid">
+	<div class="row" id="result_container">
+	</div>
+</div>
+
+<div class="col-xs-12 col-md-6 p-5 result d-none"></div>
+
+<div style="position: fixed; bottom: 20px; right: 20px">
+	<!-- Open pocket modal -->
+	<button id="openModal" type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+	</button>
+</div>
+
+
+<!-- Pocket Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">My Pocket</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div id="pocket_contents" class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary w-100" data-dismiss="modal">Close</button> <br/>
+        <button id="download_text" type="button" class="btn btn-primary w-100" data-dismiss="modal">Download as TXT</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+	$(document).ready(function()	{
+		let pocket = []
+
+		let open_pocket_button = document.querySelector("#openModal")
+		let pocket_contents = document.querySelector("#pocket_contents")
+		open_pocket_button.innerHTML = updatePocketCounter()
+
+		// Updates the pocket item count
+		function updatePocketCounter()	{
+			return "Pocket (" + pocket.length + ")"
+		}
+
+		// Add to Pocket
+		// Push into array, change label on pocket button
+		function addToPocket()	{
+			pocket.push(event.target.parentElement)
+			open_pocket_button.innerHTML = updatePocketCounter()
+		}
+
+		// Open Pocket
+		// Clear out the modal
+		// Load up all things in the pocket array
+		open_pocket_button.onclick = function(event)	{
+			while(pocket_contents.firstChild)	{
+				pocket_contents.removeChild(pocket_contents.firstChild)
+			}
+
+			pocket.forEach(function(pocket_item)	{
+				let pocket_item_container = document.createElement("div")
+				let delete_item_button = document.createElement("button")
+
+				item_text = pocket_item.childNodes[0].data
+				pocket_item_container.innerHTML = item_text
+				pocket_item_container.classList.add("mt-3")
+
+				delete_item_button.innerHTML = "Delete"
+				delete_item_button.classList.add("btn")
+				delete_item_button.classList.add("w-100")
+				delete_item_button.classList.add("btn-danger")
+
+				// Upon deleting an item, reduce counter by one
+				// Remove the respective item
+				delete_item_button.onclick = function()	{
+					pocket = pocket.filter(item => item.id != pocket_item.id)
+					open_pocket_button.innerHTML = updatePocketCounter()
+					pocket_item_container.classList.add("d-none")
+				}
+
+				pocket_item_container.appendChild(delete_item_button)
+				pocket_contents.appendChild(pocket_item_container)
+
+			});
+		}
+
+		// Save from Pocket
+		// Get ids for serverside, send AJAX.
+		let download_button = document.querySelector("#download_text")
+		download_button.onclick = function()	{
+			let save_ids = []
+
+			pocket.forEach(function(pocket_item)	{
+				save_ids.push(pocket_item.id)
+			});
+
+			// $.post( "/file/download", { ids: save_ids } );
+			$.ajax({
+				url: "/file/download",
+				method: "GET",
+				data: {ids: save_ids},
+				dataType: "JSON",
+				success: function(data)	{
+					console.log("yay")
+				},
+				error: function(data)	{
+					console.log("shit")
+				}
+			});
+		}
+
+		// AJAX Search
+	  	let result_container = document.querySelector("#result_container")
+		let result_template = document.querySelector(".result")
+
+		$("#search_bar").keyup(function()	{
+			$.ajax({
+			          url: "/search",
+			          method: "GET",
+			          data: { query: this.value },
+			          dataType: "JSON",
+			          success: function(data){
+			          	console.log(data)
+			          	// Clear old results
+			          	while(result_container.firstChild)	{
+			          		result_container.removeChild(result_container.firstChild)
+			          	}
+			          	
+			          	// For each question...
+			            data.forEach(function(question_data, index)	{
+			            	let question = question_data[0]
+			            	let answer_data = question_data[1]
+
+			            	let answers = []
+
+			            	// Extract answer text for question
+			            	answer_data.forEach(function(answer)	{
+			            		answers.push(answer.text)
+			            	})
+
+			            	let _result = result_template.cloneNode(true)
+			            	_result.id = question.id //WAS INDEX
+			            	_result.classList.toggle("d-none")
+			            	_result.innerHTML = question.question_type + ": " + question.text
+
+			            	let answer_bullets = document.createElement("ul")
+			            	_result.appendChild(answer_bullets)
+
+			            	answers.forEach(function(answer_text)	{
+			            		let _answer = document.createElement("li")
+			            		_answer.innerHTML = answer_text
+			            		answer_bullets.appendChild(_answer)
+			            	});
+
+			            	// Create add to pocket button
+			            	let toPocketButton = document.createElement("button")
+			            	toPocketButton.innerHTML = "Add to Pocket"
+			            	toPocketButton.onclick = addToPocket
+			            	toPocketButton.classList.add("btn")
+			            	toPocketButton.classList.add("btn-primary")
+			            	_result.appendChild(toPocketButton)
+
+			            	result_container.appendChild(_result)
+			             });
+			          },
+			          error: function(data){
+			            console.log(error);
+			          }
+			       });
+		});
+	});
+</script>
+
+<style>
+	.result	{
+		border: 1px solid black;
+	}
+</style>
